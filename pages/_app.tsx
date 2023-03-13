@@ -24,7 +24,8 @@ export default function App({ Component, pageProps }: AppProps) {
             <div className='flex justify-between'>
               <div className="font-sans">
                 <Link href="/">
-                  <h1 className="font-bold font-sans break-normal text-gray-900 pt-6 pb-2 text-3xl md:text-4xl">Whale Tracker</h1>
+                  <h1 className="font-bold font-sans break-normal text-gray-900 pt-6 pb-2 text-3xl md:text-4xl">Big Fish Tracker</h1>
+                  <p className="text-sm md:text-base font-normal text-gray-600">Follow the big fish</p>
                   <p className="text-sm md:text-base font-normal text-gray-600">All latest <span className="text-green-500">USDT</span> and <span className="text-blue-500">USDC</span> big moves (BETA)</p>
                 </Link>
               </div>

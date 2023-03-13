@@ -53,37 +53,61 @@ const App = ({ initialData, error }: Props) => {
   const [loaded, setLoaded] = useState(initialData.length);
   const [disableReload, setDisableReload] = useState(false);
   const [range, setRange] = useState(appConfig.defaultThreshold);
-  const [isLoading, setIsLoading] = useState(false)
+  // const [isLoading, setIsLoading] = useState(false)
   const limit = 10;
 
   const handleFilterSubmit = async (e: any) => {
     e.preventDefault();
-    setIsLoading(true);
 
-    setData([]);
-    setLoaded(0);
+    try {
+      // setIsLoading(true);
+      toast.success('Loading data', { autoClose: 1000, pauseOnHover: false });
 
-    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
-    const newData = await response.json();
+      setData([]);
+      setLoaded(0);
 
-    setData(newData);
-    setLoaded(newData.length);
-    setIsLoading(false);
-    setDisableReload(true);
-    setTimeout(() => setDisableReload(false), 5000);
+      const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
+      if (!response.ok) throw new Error('Bad request error');
+      const newData = await response.json();
+
+      setData(newData);
+      setLoaded(newData.length);
+      // setIsLoading(false);
+      toast.success(`Loaded ${newData.length} latest events above ${formatAmount(String(range))}`);
+      setDisableReload(true);
+      setTimeout(() => setDisableReload(false), 5000);
+    } catch (error: any) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(error);
+      }
+    }
   };
 
   const handleLoadMore = async () => {
-    setIsLoading(true);
+    try {
+      // setIsLoading(true);
+      toast.success('Loading data', { autoClose: 1000, pauseOnHover: false });
 
-    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
-    const newData = await response.json();
+      const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
+      if (!response.ok) throw new Error('Bad request error');
+      const newData = await response.json();
 
-    setData([...data, ...newData]);
-    setLoaded(loaded + newData.length);
-    setIsLoading(false);
-    setDisableReload(true);
-    setTimeout(() => setDisableReload(false), 5000);
+      setData([...data, ...newData]);
+      setLoaded(loaded + newData.length);
+      // setIsLoading(false);
+      toast.success(`Loaded ${newData.length} more events above ${formatAmount(String(range))}`);
+      toast.success(`Total events loaded: ${loaded + newData.length}`);
+      setDisableReload(true);
+      setTimeout(() => setDisableReload(false), 5000);
+    } catch (error: any) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(error);
+      }
+    }
   };
 
   return (

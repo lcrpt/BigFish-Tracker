@@ -58,38 +58,33 @@ const AddressEvents = ({ initialData, error }: Props) => {
   const [loaded, setLoaded] = useState(initialData.length);
   const [disableReload, setDisableReload] = useState(false);
   const [range, setRange] = useState(appConfig.defaultThreshold);
-  const [isLoading, setIsLoading] = useState(false)
+  // const [isLoading, setIsLoading] = useState(false)
   const limit = 10;
 
   const handleLoadMore = async () => {
-    setIsLoading(true);
+    try {
+      // setIsLoading(true);
+      toast.success('Loading data', { autoClose: 1000, pauseOnHover: false });
 
-    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
-    const newData = await response.json();
+      const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
+      if (!response.ok) throw new Error('Bad request error');
+      const newData = await response.json();
 
-    setData([...data, ...newData]);
-    setLoaded(loaded + newData.length);
-    setIsLoading(false);
-    setDisableReload(true);
-    setTimeout(() => setDisableReload(false), 5000);
+      setData([...data, ...newData]);
+      setLoaded(loaded + newData.length);
+      // setIsLoading(false);
+      setDisableReload(true);
+      setTimeout(() => setDisableReload(false), 5000);
+
+    } catch (error: any) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(error);
+      }
+    }
   };
 
-  const loadEvents = async () => {
-    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
-    const newData = await response.json();
-
-    setData(newData);
-    setLoaded(newData.length);
-    setIsLoading(false);
-    setDisableReload(true);
-    setTimeout(() => setDisableReload(false), 5000);
-  }
-
-  useEffect(() => {
-    setIsLoading(true);
-    loadEvents();
-  }, [limit, address]);
-  
   return (
     <>
       <div className="relative py-3 lg mx-auto text-center">
