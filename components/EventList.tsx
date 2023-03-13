@@ -1,5 +1,6 @@
 import { Event } from '../types/models';
 import EventItem from './EventItem';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Props {
   events: Event[];
@@ -11,7 +12,7 @@ const EventList = ({ events, disableReload, handleLoadMore }: Props) => {
   return (
     <>
       {events.map(event => (
-        <EventItem event={event} key={event.transactionHash} />
+        <EventItem event={event} key={uuidv4()} />
       ))}
       <button
         onClick={handleLoadMore}

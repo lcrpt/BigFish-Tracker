@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import clientPromise from '@/lib/mongodb';
+import { appConfig } from '@/utils/appConfig';
 
-const defaultThreshold = 10000000;
 
 export default async function handle(
   req: NextApiRequest,
@@ -15,11 +15,11 @@ export default async function handle(
       const {
         skip = 0,
         limit = 10,
-        range = defaultThreshold
+        range = appConfig.defaultThreshold
       } = req.query;
 
       if (!limit || !skip || !range) {
-        res.status(400).json({ error: 'Bad Request, missing parameters' });
+        res.status(400).json({ message: 'Bad Request, missing parameters' });
         return;
       }
 

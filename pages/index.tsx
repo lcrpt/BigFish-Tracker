@@ -1,29 +1,31 @@
 import { GetServerSideProps } from 'next';
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-
 import { Event } from '@/types/models';
 import { formatAmount } from '@/utils/formats';
 import EventList from '@/components/EventList';
-
-const defaultThreshold = 10000000;
+import clientPromise from '@/lib/mongodb';
+import { appConfig } from '@/utils/appConfig';
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    if (!process.env.BASE_URL) throw new Error('Missing env variables');
-    const baseUrl = process.env.BASE_URL;
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGO_DBNAME);
 
-    const limit = context.query.limit || 2;
+    const limit = context.query.limit || 10;
     const skip = context.query.skip || 0;
-    const range = context.query.range || defaultThreshold;
+    const range = context.query.range || appConfig.defaultThreshold;
 
-    const data = await fetch(`${baseUrl}/api/events?limit=${limit}&range=${range}&skip=${skip}`);
-    const initialData = await data.json();
+    const data = await db.collection('events')
+      .find({ amount: { $gte: Number(range) } })
+      .sort({ createdAt: -1 })
+      .skip(Number(skip))
+      .limit(Number(limit))
+      .toArray();
 
     return {
       props: {
-        initialData,
-        baseUrl,
+        initialData: JSON.parse(JSON.stringify(data)),
         error: null
       }
     }
@@ -37,23 +39,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }
 }
 
-
 interface Props {
-  initialData: Array<Event>;
+  initialData: Event[];
   error?: string;
-  baseUrl: string;
 }
 
-const App = ({ initialData, error, baseUrl }: Props) => {
+const App = ({ initialData, error }: Props) => {
   if (error) {
     console.error("error:", error)
     toast.error(error)
   }
-
   const [data, setData] = useState(initialData);
   const [loaded, setLoaded] = useState(initialData.length);
   const [disableReload, setDisableReload] = useState(false);
-  const [range, setRange] = useState(defaultThreshold);
+  const [range, setRange] = useState(appConfig.defaultThreshold);
   const [isLoading, setIsLoading] = useState(false)
   const limit = 10;
 
@@ -64,7 +63,7 @@ const App = ({ initialData, error, baseUrl }: Props) => {
     setData([]);
     setLoaded(0);
 
-    const response = await fetch(`${baseUrl}/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
+    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
     const newData = await response.json();
 
     setData(newData);
@@ -77,7 +76,7 @@ const App = ({ initialData, error, baseUrl }: Props) => {
   const handleLoadMore = async () => {
     setIsLoading(true);
 
-    const response = await fetch(`${baseUrl}/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
+    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}`);
     const newData = await response.json();
 
     setData([...data, ...newData]);
@@ -97,7 +96,7 @@ const App = ({ initialData, error, baseUrl }: Props) => {
               <input
                 id="range"
                 type="range"
-                min={defaultThreshold} max="1000000000" step="100000"
+                min={appConfig.defaultThreshold} max="1000000000" step="100000"
                 value={range}
                 onChange={e => setRange(Number(e.currentTarget.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"

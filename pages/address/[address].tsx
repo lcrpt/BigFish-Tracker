@@ -2,32 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/router'
 import { GetServerSideProps } from 'next';
-import { Event } from '../../types/models';
-import EventList from '../../components/EventList';
-
-const defaultThreshold = 10000000;
+import { Event } from '@/types/models';
+import EventList from '@/components/EventList';
+import clientPromise from '@/lib/mongodb';
+import { appConfig } from '@/utils/appConfig';
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    if (!process.env.BASE_URL) throw new Error('Missing env variables');
-    const baseUrl = process.env.BASE_URL;
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGO_DBNAME);
 
     const limit = context.query.limit || 2;
     const skip = context.query.skip || 0;
-    const range = context.query.range || defaultThreshold;
     const address = context.query.address;
 
-    if (!address) {
-      throw new Error('Wrong Request missing the address');
-    }
+    if (!address) throw new Error('Wrong Request missing the address');
 
-    const data = await fetch(`${baseUrl}/api/events?limit=${limit}&range=${range}&skip=${skip}`);
-    const initialData = await data.json();
+    const data = await db.collection('events')
+      .find({ $or: [{ from: address }, { to: address }] })
+      .sort({ createdAt: -1 })
+      .skip(Number(skip))
+      .limit(Number(limit))
+      .toArray();
 
     return {
       props: {
-        initialData,
-        baseUrl,
+        initialData: JSON.parse(JSON.stringify(data)),
         error: null
       }
     }
@@ -42,12 +42,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 }
 
 interface Props {
-  initialData: Array<Event>;
+  initialData: Event[];
   error?: string;
-  baseUrl: string;
 }
 
-const AddressEvents = ({ initialData, error, baseUrl }: Props) => {
+const AddressEvents = ({ initialData, error }: Props) => {
   if (error) {
     console.error("error:", error)
     toast.error(error)
@@ -55,35 +54,17 @@ const AddressEvents = ({ initialData, error, baseUrl }: Props) => {
 
   const router = useRouter();
   const { address } = router.query;
-
   const [data, setData] = useState(initialData);
   const [loaded, setLoaded] = useState(initialData.length);
   const [disableReload, setDisableReload] = useState(false);
-  const [range, setRange] = useState(defaultThreshold);
+  const [range, setRange] = useState(appConfig.defaultThreshold);
   const [isLoading, setIsLoading] = useState(false)
   const limit = 10;
-
-  const handleFilterSubmit = async (e: any) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    setData([]);
-    setLoaded(0);
-
-    const response = await fetch(`${baseUrl}/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
-    const newData = await response.json();
-
-    setData(newData);
-    setLoaded(newData.length);
-    setIsLoading(false);
-    setDisableReload(true);
-    setTimeout(() => setDisableReload(false), 5000);
-  };
 
   const handleLoadMore = async () => {
     setIsLoading(true);
 
-    const response = await fetch(`${baseUrl}/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
+    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
     const newData = await response.json();
 
     setData([...data, ...newData]);
@@ -94,7 +75,7 @@ const AddressEvents = ({ initialData, error, baseUrl }: Props) => {
   };
 
   const loadEvents = async () => {
-    const response = await fetch(`${baseUrl}/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
+    const response = await fetch(`/api/events?limit=${limit}&range=${range}&skip=${loaded}&address=${address}`);
     const newData = await response.json();
 
     setData(newData);
